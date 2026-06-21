@@ -1,0 +1,11 @@
+# Manually reviewed return anomalies (see notebooks/01_data_exploration).
+
+anomalies:
+  - ticker: DHR
+    date: 2016-07-05
+    reason: "Adjusted price discontinuity, likely split-adjustment error"
+    fix: null
+  - ticker: EXPE
+    date: 2011-12-21
+    reason: "TRIP spin-off, economically meaningless transition return"
+    fix: null
