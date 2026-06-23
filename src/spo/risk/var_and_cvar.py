@@ -18,7 +18,7 @@ def hist_cvar(returns: pd.Series, alpha: float=0.05) -> float:
     Historical CVaR: mean return given return <= VaR.
     """
     var = hist_var(returns, alpha)
-    return float(returns[returns <= alpha].mean())
+    return float(returns[returns <= var].mean())
 
 def param_var(returns: pd.Series, alpha: float=0.05) -> float:
     """

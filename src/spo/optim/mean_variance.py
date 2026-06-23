@@ -31,10 +31,11 @@ def estimate_covariance(returns: pd.DataFrame, method: str="ledoit_wolf") -> np.
 def min_var_portfolio(returns: pd.DataFrame, covariance: str="ledoit_wolf", long_only: bool=True, max_weight: float | None=None) -> pd.Series:
     """
     Minimum-variance portfolio optimization.
-    Solves: 
+    Solves:
         min w' Σ w
         s.t. w' 1 = 1, w >= 0 (if long positions only), w <= max_weight (if applicable)
     """
+    returns = returns.dropna(axis=1)
     cov  = estimate_covariance(returns, method=covariance)
     n = cov.shape[0]
     w = cp.Variable(n)
@@ -55,11 +56,12 @@ def max_sharpe_portfolio(returns: pd.DataFrame, rf: float=0.0, covariance: str="
     """
     Maximum-Sharpe portfolio via long position only Markowitz transform.
     Solves:
-        min x' Σ x 
+        min x' Σ x
         s.t. (μ - rf)' x = 1, x >= 0
-    
+
     Falls back to min-variance if no asset has positive expected excess return.
     """
+    returns = returns.dropna(axis=1)
     cov = estimate_covariance(returns, method=covariance)
     mu = returns.mean().values
     excess = mu - rf
@@ -85,6 +87,7 @@ def efficient_frontier(returns: pd.DataFrame, n_points: int=30, covariance: str=
     """
     Trace an efficient frontier from the target returns.
     """
+    returns = returns.dropna(axis=1)
     cov = estimate_covariance(returns, method=covariance)
     mu = returns.mean().values
     n = cov.shape[0]
