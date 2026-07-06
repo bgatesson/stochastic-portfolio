@@ -22,11 +22,10 @@ def _psd_cholesky(corr: np.ndarray, epsilon: float = 1e-7) -> np.ndarray:
     floating-point error or pairwise-NaN construction.
     We clip eigenvalues to epsilon, rescale the diagonal back to 1, then Cholesky.
     """
-    sym = 0.5 * (corr + corr.T)
-    eigvals, eigvecs = np.linalg.eigh(sym)
-    n_clipped = int((eigvals < epsilon).sum())
-    if n_clipped > 0:
-        logger.warning("Clipped %d/%d eigenvalues below %.1e (min was %.2e)", n_clipped, len(eigvals), epsilon, eigvals.min())
+    eigvals, eigvecs = np.linalg.eigh(corr)
+    n_negative = int((eigvals < 0).sum())
+    if n_negative > 0:
+        logger.warning("Clipped %d/%d negative eigenvalues (min was %.2e)", n_negative, len(eigvals), eigvals.min())
     eigvals = np.maximum(eigvals, epsilon)
     psd = (eigvecs * eigvals) @ eigvecs.T
     d = np.sqrt(np.maximum(np.diag(psd), epsilon))
@@ -118,8 +117,7 @@ def _simulate_heston_single(
         v_pos = np.maximum(v, 0.0)
         # Log-return increment with Ito correction
         log_returns[:, t] = (params.mu - 0.5 * v_pos) * dt + np.sqrt(v_pos * dt) * z_s[:, t]
-        # Variance update — full-truncation: clamp updated v to [0, inf) so it never goes
-        # negative between steps, reducing plateau artifacts when Feller is mildly violated.
+        # clamp variance v to [0, inf) so it never goes negative between steps
         v = np.maximum(
             v + kappa * (theta - v_pos) * dt + sigma * np.sqrt(v_pos * dt) * z_v_corr[:, t],
             0.0,

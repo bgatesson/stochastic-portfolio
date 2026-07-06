@@ -210,9 +210,19 @@ def calibrate_heston_multi(log_returns: pd.DataFrame) -> MultiAssetHestonParams:
             "NOT VIOLATED" if assets[ticker].feller_check else "VIOLATED"
         )
     
-    return_corr = log_returns.dropna(how="any").corr()
+    # Ledoit-Wolf correlation: consistent with GBM's estimator, always full-rank,
+    # eliminates rank-deficiency artifacts from limited-history windows.
+    # Assets with any NaN are dropped so LW sees a clean dense matrix.
+    from sklearn.covariance import LedoitWolf
+    dense = log_returns.dropna(axis=1)
+    dense_tickers = list(dense.columns)
+    cov_lw = LedoitWolf().fit(dense.values).covariance_
+    d = np.sqrt(np.diag(cov_lw))
+    corr_arr = cov_lw / np.outer(d, d)
+    np.fill_diagonal(corr_arr, 1.0)
+    return_corr = pd.DataFrame(corr_arr, index=dense_tickers, columns=dense_tickers)
     return MultiAssetHestonParams(
-        assets=assets,
+        assets={t: assets[t] for t in dense_tickers},
         return_corr=return_corr,
-        tickers=list(log_returns.columns)
+        tickers=dense_tickers,
     )

@@ -34,10 +34,10 @@ def black_litterman_posterior(
         market_weights: pd.Series,
         cov: np.ndarray,
         risk_aversion: float=2.5,
-        tau: float = 0.05,
-        views: pd.DataFrame | None = None,
-        view_returns: pd.Series | None = None,
-        view_confidences: pd.Series | None = None,
+        tau: float=0.05,
+        views: pd.DataFrame | None=None,
+        view_returns: pd.Series | None=None,
+        view_confidences: pd.Series | None=None,
 ) -> tuple[pd.Series, np.ndarray]:
     """
     Compute Black-Litterman posterior expected returns and posterior covariance.
@@ -60,7 +60,6 @@ def black_litterman_posterior(
     view_confidences : pd.Series, optional
         (K,) vector of variances Ω_kk. Higher = less confidence.
     """
-    n = len(market_weights)
     tickers = list(market_weights.index)
     pi = implied_equilibrium_returns(market_weights, cov, risk_aversion).values
     tau_cov_inv = np.linalg.inv(tau * cov)
@@ -80,3 +79,53 @@ def black_litterman_posterior(
     A = tau_cov_inv + P.T @ omega_inv @ P
     b = tau_cov_inv @ pi + P.T @ omega_inv @ Q
     mu_bl = np.linalg.solve(A, b)
+
+    # Posterior covariance
+    M = np.linalg.inv(A)
+    cov_bl = cov + M
+
+    return pd.Series(mu_bl, index=tickers), cov_bl
+
+
+def black_litterman_portfolio(
+    returns: pd.DataFrame,
+    market_weights: pd.Series | None = None,
+    risk_aversion: float=2.5,
+    tau: float=0.05,
+    views: pd.DataFrame | None=None,
+    view_returns: pd.Series | None=None,
+    view_confidences: pd.Series | None=None,
+    covariance: str = "ledoit_wolf",
+    long_only: bool=True,
+) -> pd.Series: 
+    """
+    Black-Litterman portfolio.
+
+    Falls back to equal-weight prior if no market weights are given.
+    """
+    returns = returns.dropna(axis=1)
+    tickers = list(returns.columns)
+    if market_weights is None:
+        market_weights = pd.Series(1.0 / len(tickers), index=tickers)
+    else:
+        # Align and fill missing with equal weight
+        market_weights = market_weights.reindex(tickers).fillna(1.0 / len(tickers))
+
+    cov = estimate_covariance(returns, method=covariance)
+    mu_bl, cov_bl = black_litterman_posterior(market_weights, cov, risk_aversion, tau,
+        views, view_returns, view_confidences,
+    )
+
+    # Solve the standard mean-variance problem with BL inputs
+    n = len(tickers)
+    w = cp.Variable(n)
+    constraints = [cp.sum(w) == 1]
+    if long_only:
+        constraints.append(w >= 0)
+    prob = cp.Problem(cp.Minimize(0.5 * risk_aversion * cp.quad_form(w, cp.psd_wrap(cov_bl)) - mu_bl.values @ w), constraints)
+    prob.solve()
+
+    if w.value is None:
+        raise RuntimeError("Black-Litterman portfolio solve failed")
+
+    return pd.Series(w.value, index=tickers)

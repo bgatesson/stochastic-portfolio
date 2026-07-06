@@ -1,0 +1,46 @@
+# Default experiment configuration for the walk-forward backtest.
+# Values here override the built-in defaults in each strategy factory.
+
+default:
+  universe: sp500
+  start: "2015-01-01"
+  end: "2025-12-31"
+  rebalance_freq: "BME"
+  lookback_days: 504
+  cost_bps: 10.0
+
+strategies:
+  - name: equal_weight
+    label: "Equal-Weight"
+
+  - name: min_variance
+    label: "Min-Variance"
+    params:
+      covariance: ledoit_wolf
+
+  - name: black_litterman
+    label: "Black-Litterman"
+    params:
+      tau: 0.05
+      risk_aversion: 2.5
+
+  - name: robust_mv
+    label: "Robust-MV"
+    params:
+      kappa: 1.0
+
+  - name: gbm_cvar
+    label: "GBM-CVaR"
+    params:
+      alpha: 0.95
+      n_paths: 3000
+      n_steps: 21
+      seed: 42
+
+  - name: heston_cvar
+    label: "Heston-CVaR"
+    params:
+      alpha: 0.95
+      n_paths: 3000
+      n_steps: 21
+      seed: 42

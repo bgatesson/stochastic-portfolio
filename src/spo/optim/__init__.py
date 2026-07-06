@@ -16,6 +16,14 @@ from spo.optim.cvar import(
     scenarios_from_sim
 )
 
+from spo.optim.black_litterman import(
+    black_litterman_portfolio,
+    black_litterman_posterior,
+    implied_equilibrium_returns
+)
+
+from spo.optim.robust_mean_variance import robust_max_sharpe_portfolio
+
 __all__ = [
     "estimate_covariance",
     "max_sharpe_portfolio",
@@ -25,5 +33,9 @@ __all__ = [
     "cvar_frontier",
     "max_return_cvar_constrained",
     "min_cvar_portfolio",
-    "scenarios_from_sim"
+    "scenarios_from_sim",
+    "black_litterman_portfolio",
+    "black_litterman_posterior",
+    "implied_equilibrium_returns",
+    "robust_max_sharpe_portfolio"
 ]
